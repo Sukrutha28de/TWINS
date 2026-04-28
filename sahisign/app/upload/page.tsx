@@ -79,6 +79,11 @@ function UploadPageContent() {
         }, 200)
 
         try {
+            // Clear old analysis data so dashboard doesn't show stale results
+            localStorage.removeItem("sahisign_results")
+            localStorage.removeItem("sahisign_doc_type")
+            localStorage.removeItem("sahisign_doc_name")
+
             const formData = new FormData()
             formData.append("file", file)
             formData.append("document_type", documentType)
@@ -143,8 +148,8 @@ function UploadPageContent() {
                                         onClick={() => setDocumentType(doc.value)}
                                         disabled={isUploading}
                                         className={`relative rounded-xl p-5 border-2 border-[#0A0A0A] transition-all duration-200 text-left ${isSelected
-                                                ? "shadow-[6px_6px_0_0_#0A0A0A] -translate-y-1"
-                                                : "shadow-[3px_3px_0_0_#0A0A0A] hover:-translate-y-0.5 hover:shadow-[5px_5px_0_0_#0A0A0A]"
+                                            ? "shadow-[6px_6px_0_0_#0A0A0A] -translate-y-1"
+                                            : "shadow-[3px_3px_0_0_#0A0A0A] hover:-translate-y-0.5 hover:shadow-[5px_5px_0_0_#0A0A0A]"
                                             }`}
                                         style={{ backgroundColor: doc.color }}
                                     >
@@ -167,7 +172,7 @@ function UploadPageContent() {
 
                     <div className="mb-10">
                         <h2 className="text-sm font-bold uppercase tracking-wider text-[#0A0A0A] mb-4">
-                            PDF Document
+                            Upload your PDF document
                         </h2>
 
                         {!file ? (
@@ -192,9 +197,9 @@ function UploadPageContent() {
                                         if (f) handleFileSelect(f)
                                     }}
                                 />
-                                <Upload className="h-12 w-12 mx-auto mb-4" />
-                                <p className="text-lg font-bold mb-1">Drop your PDF here, or click to browse</p>
-                                <p className="text-sm opacity-70">PDF only — max 10MB</p>
+                                <Upload className="h-12 w-12 mx-auto mb-4 text-[#0A0A0A]" />
+                                <p className="text-lg font-bold mb-1 text-[#0A0A0A]">Drop your PDF here, or click to browse</p>
+                                <p className="text-sm text-[#3D2817]">PDF only — max 10MB</p>
                             </div>
                         ) : (
                             <div className="bg-[#FFF8E7] border-2 border-[#0A0A0A] rounded-2xl p-6 flex items-center gap-4 shadow-[4px_4px_0_0_#0A0A0A]">

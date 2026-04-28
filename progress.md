@@ -90,3 +90,7 @@ Constraints and Challenges
 - Multiple API calls increase response time for large documents
 - Ensuring consistent and valid JSON output from AI responses
 - Maintaining balance between performance and full document coverage
+
+Currently Working On
+
+Connecting the frontend to the backend for live end-to-end testing. Vaishnav's Flask backend is running on his laptop, and we're updating `lib/api.ts` with his local IP so my frontend can hit `/analyze` and `/generate-redlined-pdf` over the same WiFi. Testing with real builder agreements, sale deeds, and home loan letters to make sure the full flow holds up — upload, AI analysis, dashboard render, PDF download. Tweaking edge cases as we hit them.
