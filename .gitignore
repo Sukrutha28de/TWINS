@@ -1,0 +1,10 @@
+# Backend secrets
+backend/.env
+
+# Python cache
+backend/__pycache__/
+backend/venv/
+*.pyc
+
+# Misc
+.DS_Store
