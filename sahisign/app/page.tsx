@@ -2,6 +2,7 @@
 
 import { Navbar } from "@/components/navbar"
 import { Footer } from "@/components/footer"
+import { Logo } from "@/components/logo"
 import { BuildingIllustration } from "@/components/illustrations/building-illustration"
 import { LandIllustration } from "@/components/illustrations/land-illustration"
 import { HouseIllustration } from "@/components/illustrations/house-illustration"
@@ -19,8 +20,8 @@ export default function LandingPage() {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 md:py-32">
             <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 items-center">
               <div className="lg:col-span-3">
-                <div className="inline-block bg-[#0A0A0A] text-white px-3 py-1 rounded text-xs font-bold uppercase tracking-wider mb-6">
-                  AI-Powered Risk Analysis
+                <div className="mb-6">
+                  <Logo variant="dark" size="md" />
                 </div>
                 <h1 className="text-5xl sm:text-7xl lg:text-8xl font-black text-[#0A0A0A] tracking-tight leading-[0.95] mb-6">
                   Don&apos;t sign{" "}

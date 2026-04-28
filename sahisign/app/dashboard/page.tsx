@@ -2,7 +2,6 @@
 
 import { Navbar } from "@/components/navbar"
 import { Footer } from "@/components/footer"
-import { Download, FileText, AlertTriangle, AlertCircle, CheckCircle, Loader2 } from "lucide-react"
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { API_URL } from "@/lib/api"
@@ -25,12 +24,6 @@ interface AnalysisData {
     medium_risk_count: number
     low_risk_count: number
     clauses: Clause[]
-}
-
-const RISK_COLORS = {
-    HIGH: { bg: "#EF4444", border: "#EF4444" },
-    MEDIUM: { bg: "#F59E0B", border: "#F59E0B" },
-    LOW: { bg: "#22C55E", border: "#22C55E" },
 }
 
 const SAMPLE_DATA: AnalysisData = {
@@ -94,28 +87,26 @@ const SAMPLE_DATA: AnalysisData = {
 
 export default function DashboardPage() {
     const router = useRouter()
-    const [visibleCards, setVisibleCards] = useState<number[]>([])
     const [analysisData, setAnalysisData] = useState<AnalysisData | null>(null)
     const [documentType, setDocumentType] = useState("")
     const [documentName, setDocumentName] = useState("")
     const [isDownloading, setIsDownloading] = useState(false)
     const [displayScore, setDisplayScore] = useState(0)
+    const [openClauses, setOpenClauses] = useState<Set<number>>(new Set())
+    const [visibleCards, setVisibleCards] = useState<number[]>([])
     const [isDemo, setIsDemo] = useState(false)
 
     useEffect(() => {
         const results = localStorage.getItem("sahisign_results")
         const docType = localStorage.getItem("sahisign_doc_type")
         const docName = localStorage.getItem("sahisign_doc_name")
-
         if (!results) {
-            // No real data — load sample demo data instead of redirecting
             setAnalysisData(SAMPLE_DATA)
             setDocumentType("Builder Agreement")
             setDocumentName("sample_agreement.pdf")
             setIsDemo(true)
             return
         }
-
         setAnalysisData(JSON.parse(results))
         setDocumentType(docType || "")
         setDocumentName(docName || "")
@@ -126,8 +117,8 @@ export default function DashboardPage() {
         const target = analysisData.overall_score
         const duration = 1500
         const startTime = performance.now()
-        const animate = (currentTime: number) => {
-            const elapsed = currentTime - startTime
+        const animate = (now: number) => {
+            const elapsed = now - startTime
             const progress = Math.min(elapsed / duration, 1)
             const eased = 1 - Math.pow(1 - progress, 3)
             setDisplayScore(Math.round(eased * target))
@@ -141,9 +132,18 @@ export default function DashboardPage() {
         analysisData.clauses.forEach((_, index) => {
             setTimeout(() => {
                 setVisibleCards((prev) => [...prev, index])
-            }, 80 * index + 400)
+            }, 80 * index + 300)
         })
     }, [analysisData])
+
+    const toggleClause = (index: number) => {
+        setOpenClauses((prev) => {
+            const next = new Set(prev)
+            if (next.has(index)) next.delete(index)
+            else next.add(index)
+            return next
+        })
+    }
 
     const handleDownload = async () => {
         if (!analysisData) return
@@ -162,7 +162,7 @@ export default function DashboardPage() {
             const url = URL.createObjectURL(blob)
             const a = document.createElement("a")
             a.href = url
-            a.download = "sahisign_report.pdf"
+            a.download = "SahiSign_Risk_Report.pdf"
             a.click()
             URL.revokeObjectURL(url)
         } catch {
@@ -175,23 +175,20 @@ export default function DashboardPage() {
     if (!analysisData) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-[#FFFDF5]">
-                <div className="flex items-center gap-3">
-                    <Loader2 className="h-6 w-6 animate-spin text-[#0A0A0A]" />
-                    <p className="text-[#3D2817] text-lg font-bold">Loading analysis...</p>
-                </div>
+                <p className="text-[#3D2817] text-lg font-bold">Loading analysis...</p>
             </div>
         )
     }
 
     const showCriticalAlert = analysisData.high_risk_count >= 3
     const scoreColor =
-        analysisData.overall_score >= 70 ? "#EF4444"
+        analysisData.overall_score >= 70 ? "#22C55E"
             : analysisData.overall_score >= 40 ? "#F59E0B"
-                : "#22C55E"
+                : "#EF4444"
     const riskLabel =
-        analysisData.overall_score >= 70 ? "HIGH RISK"
-            : analysisData.overall_score >= 40 ? "MEDIUM RISK"
-                : "LOW RISK"
+        analysisData.overall_score >= 70 ? "Low Risk"
+            : analysisData.overall_score >= 40 ? "Medium Risk"
+                : "High Risk"
 
     const donutData = [
         { name: "High", value: analysisData.high_risk_count, color: "#EF4444" },
@@ -203,64 +200,71 @@ export default function DashboardPage() {
         <div className="min-h-screen flex flex-col bg-[#FFFDF5]">
             <Navbar />
 
-            <main className="flex-1 py-12 md:py-16">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <main className="flex-1 px-6 md:px-12 py-12">
+                <div className="max-w-7xl mx-auto">
+                    {/* Demo Banner */}
                     {isDemo && (
-                        <div className="mb-8 bg-[#A78BFA] text-white rounded-xl p-4 flex items-center gap-3 border-2 border-[#0A0A0A] shadow-[4px_4px_0_0_#0A0A0A]">
-                            <FileText className="h-6 w-6 shrink-0" />
-                            <p className="font-bold">
-                                Demo Mode — Showing sample analysis. <a href="/upload" className="underline hover:text-[#FFF8E7]">Upload a real document</a> to see your results.
-                            </p>
-                        </div>
-                    )}
-                    {showCriticalAlert && (
-                        <div className="mb-8 bg-[#EF4444] text-white rounded-xl p-4 flex items-center gap-3 border-2 border-[#0A0A0A] shadow-[4px_4px_0_0_#0A0A0A] animate-pulse">
-                            <AlertTriangle className="h-6 w-6 shrink-0" />
-                            <p className="font-bold">
-                                Critical Alert: This document contains serious risks. Do not sign without legal consultation.
-                            </p>
+                        <div className="mb-8 bg-[#A78BFA] text-white rounded-xl px-6 py-4 flex items-center gap-3 font-semibold">
+                            <span>📋</span>
+                            Demo Mode — Showing sample analysis.{" "}
+                            <a href="/upload" className="underline hover:text-[#FFF8E7]">Upload a real document</a>{" "}
+                            to see your results.
                         </div>
                     )}
 
-                    <div className="mb-12">
-                        <div className="inline-block bg-[#FF5722] text-white px-3 py-1 rounded text-xs font-bold uppercase tracking-wider mb-4">
-                            Step 2 — Analysis Complete
+                    {/* Header */}
+                    <div className="flex justify-between items-start flex-wrap gap-4 mb-10">
+                        <div>
+                            <h1 className="text-4xl md:text-6xl font-black text-[#0A0A0A] tracking-tight leading-none">
+                                Risk Report
+                            </h1>
+                            <p className="text-[#888] text-sm mt-2">
+                                {documentType} · {documentName} · Analyzed just now
+                            </p>
                         </div>
-                        <h1 className="text-4xl md:text-6xl font-black text-[#0A0A0A] tracking-tight leading-[0.95] mb-4">
-                            Risk{" "}
-                            <span className="relative inline-block">
-                                Report
-                                <svg className="absolute -bottom-2 left-0 w-full" viewBox="0 0 200 12" preserveAspectRatio="none">
-                                    <path d="M 0 8 Q 50 2, 100 6 T 200 6" stroke="#FF5722" strokeWidth="4" fill="none" strokeLinecap="round" />
-                                </svg>
-                            </span>
-                            .
-                        </h1>
-                        <p className="text-[#3D2817]">
-                            {documentType} <span className="text-[#FF5722]">·</span> {documentName}{" "}
-                            <span className="text-[#FF5722]">·</span>{" "}
-                            {new Date().toLocaleDateString("en-IN", { year: "numeric", month: "long", day: "numeric" })}
-                        </p>
+                        <button
+                            onClick={() => router.push("/upload")}
+                            className="border-2 border-[#0A0A0A] text-[#0A0A0A] px-5 py-2.5 rounded-lg font-bold text-sm hover:bg-[#0A0A0A] hover:text-[#FFFDF5] transition-colors"
+                        >
+                            + New Analysis
+                        </button>
                     </div>
 
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-12">
-                        <div className="bg-white rounded-2xl p-6 border-2 border-[#0A0A0A] shadow-[6px_6px_0_0_#0A0A0A]">
-                            <h2 className="text-xs font-black uppercase tracking-wider text-[#0A0A0A] mb-4 text-center">
+                    {/* Critical Alert */}
+                    {showCriticalAlert && (
+                        <div className="bg-[#EF4444] text-white rounded-xl px-6 py-4 flex items-center gap-3 font-semibold mb-8 animate-pulse">
+                            <span>⚠️</span>
+                            Critical Alert: This document contains serious risks. Do not sign without legal consultation.
+                        </div>
+                    )}
+
+                    {/* Stats Row */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                        <StatCard label="Total Clauses" value={analysisData.total_clauses} type="total" />
+                        <StatCard label="High Risk" value={analysisData.high_risk_count} type="high" />
+                        <StatCard label="Medium Risk" value={analysisData.medium_risk_count} type="medium" />
+                        <StatCard label="Low Risk" value={analysisData.low_risk_count} type="low" />
+                    </div>
+
+                    {/* Main Grid: Score Card + Clauses */}
+                    <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-8">
+                        {/* Score Card */}
+                        <div className="bg-[#0A0A0A] text-[#FFFDF5] rounded-2xl p-8 text-center lg:sticky lg:top-24 self-start">
+                            <p className="text-xs font-bold uppercase tracking-widest text-[#666] mb-6">
                                 Overall Risk Score
-                            </h2>
-                            <div className="relative h-56">
+                            </p>
+                            <div className="relative w-44 h-44 mx-auto mb-6">
                                 <ResponsiveContainer width="100%" height="100%">
                                     <PieChart>
                                         <Pie
                                             data={donutData}
                                             cx="50%"
                                             cy="50%"
-                                            innerRadius={65}
-                                            outerRadius={95}
-                                            paddingAngle={3}
+                                            innerRadius={62}
+                                            outerRadius={85}
+                                            paddingAngle={2}
                                             dataKey="value"
-                                            strokeWidth={2}
-                                            stroke="#0A0A0A"
+                                            strokeWidth={0}
                                         >
                                             {donutData.map((entry, i) => (
                                                 <Cell key={i} fill={entry.color} />
@@ -272,96 +276,112 @@ export default function DashboardPage() {
                                     <span className="text-5xl font-black" style={{ color: scoreColor }}>
                                         {displayScore}
                                     </span>
-                                    <span className="text-xs font-bold uppercase tracking-wider mt-1" style={{ color: scoreColor }}>
-                                        {riskLabel}
-                                    </span>
-                                    <span className="text-[10px] text-[#3D2817] mt-1 italic">
-                                        Based on clause severity
-                                    </span>
+                                    <span className="text-xs text-[#666] mt-1">{riskLabel}</span>
                                 </div>
                             </div>
-                            <div className="flex justify-center gap-4 mt-2">
-                                <Legend color="#EF4444" label="High" />
-                                <Legend color="#F59E0B" label="Medium" />
-                                <Legend color="#22C55E" label="Low" />
+
+                            <div className="space-y-2 mb-6 text-left px-2">
+                                <LegendItem color="#EF4444" label={`High Risk (${analysisData.high_risk_count} clauses)`} />
+                                <LegendItem color="#F59E0B" label={`Medium Risk (${analysisData.medium_risk_count} clauses)`} />
+                                <LegendItem color="#22C55E" label={`Low Risk (${analysisData.low_risk_count} clauses)`} />
+                            </div>
+
+                            <div className="h-px bg-[#1a1a1a] mb-6" />
+
+                            <button
+                                onClick={handleDownload}
+                                disabled={isDownloading}
+                                className="w-full bg-[#FF5722] hover:opacity-85 text-white py-3 rounded-lg font-bold text-sm transition-all hover:-translate-y-0.5 disabled:opacity-50"
+                            >
+                                {isDownloading ? "Generating..." : "⬇ Download Risk Report PDF"}
+                            </button>
+                        </div>
+
+                        {/* Clauses */}
+                        <div>
+                            <h2 className="text-2xl font-black text-[#0A0A0A] mb-6 tracking-tight">
+                                Detailed Clause Analysis
+                            </h2>
+
+                            <div className="space-y-3">
+                                {analysisData.clauses.map((clause, index) => {
+                                    const isOpen = openClauses.has(index)
+                                    const visible = visibleCards.includes(index)
+                                    const borderColor =
+                                        clause.risk_level === "HIGH" ? "#EF4444"
+                                            : clause.risk_level === "MEDIUM" ? "#F59E0B"
+                                                : "#22C55E"
+
+                                    return (
+                                        <div
+                                            key={index}
+                                            className="bg-white border border-[#eee] rounded-xl overflow-hidden"
+                                            style={{
+                                                borderLeftWidth: "5px",
+                                                borderLeftColor: borderColor,
+                                                opacity: visible ? 1 : 0,
+                                                transform: visible ? "translateY(0)" : "translateY(16px)",
+                                                transition: "opacity 0.4s, transform 0.4s",
+                                            }}
+                                        >
+                                            <div
+                                                className="px-6 py-4 flex items-center justify-between gap-4 cursor-pointer hover:bg-[#fafaf7]"
+                                                onClick={() => toggleClause(index)}
+                                            >
+                                                <div className="flex items-center gap-3 flex-1 min-w-0">
+                                                    <span className="text-xs font-bold text-[#bbb] whitespace-nowrap">
+                                                        CLAUSE {clause.clause_number}
+                                                    </span>
+                                                    <RiskBadge level={clause.risk_level} />
+                                                    <span className="text-sm text-[#666] italic truncate">
+                                                        &ldquo;{clause.clause_text.substring(0, 90)}...&rdquo;
+                                                    </span>
+                                                </div>
+                                                <span
+                                                    className="text-xs text-[#bbb] transition-transform"
+                                                    style={{ transform: isOpen ? "rotate(180deg)" : "rotate(0)" }}
+                                                >
+                                                    ▼
+                                                </span>
+                                            </div>
+
+                                            {isOpen && (
+                                                <div className="px-6 pb-6">
+                                                    <div className="bg-[#f9f9f7] border-l-4 border-[#e5e5e0] rounded-lg p-4 italic text-sm text-[#333] leading-relaxed mb-4">
+                                                        &ldquo;{clause.clause_text}&rdquo;
+                                                    </div>
+
+                                                    <InfoBlock
+                                                        label="Plain English Explanation"
+                                                        content={clause.plain_english}
+                                                        bgColor="#f5f5f0"
+                                                        labelColor="#888"
+                                                        textColor="#333"
+                                                    />
+
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
+                                                        <InfoBlock
+                                                            label="Indian Law Violated"
+                                                            content={clause.law_violated}
+                                                            bgColor="#eff6ff"
+                                                            labelColor="#1d4ed8"
+                                                            textColor="#1e40af"
+                                                        />
+                                                        <InfoBlock
+                                                            label="Negotiation Tip"
+                                                            content={clause.negotiation_tip}
+                                                            bgColor="#f0fdf4"
+                                                            labelColor="#15803d"
+                                                            textColor="#166534"
+                                                        />
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )
+                                })}
                             </div>
                         </div>
-
-                        <div className="lg:col-span-2 grid grid-cols-2 md:grid-cols-4 gap-4">
-                            <StatCard label="Total Clauses" value={analysisData.total_clauses} bgColor="#FFF8E7" textColor="#0A0A0A" icon={<FileText className="h-5 w-5" />} />
-                            <StatCard label="High Risk" value={analysisData.high_risk_count} bgColor="#EF4444" textColor="#FFFFFF" icon={<AlertTriangle className="h-5 w-5" />} />
-                            <StatCard label="Medium Risk" value={analysisData.medium_risk_count} bgColor="#F59E0B" textColor="#FFFFFF" icon={<AlertCircle className="h-5 w-5" />} />
-                            <StatCard label="Low Risk" value={analysisData.low_risk_count} bgColor="#22C55E" textColor="#FFFFFF" icon={<CheckCircle className="h-5 w-5" />} />
-                        </div>
-                    </div>
-
-                    <div className="mb-12">
-                        <h2 className="text-2xl md:text-4xl font-black text-[#0A0A0A] mb-2">Detailed Clause Analysis</h2>
-                        <p className="text-[#3D2817] mb-8">Every clause, broken down. Color-coded by risk.</p>
-
-                        <div className="space-y-4">
-                            {analysisData.clauses.map((clause, index) => {
-                                const colors = RISK_COLORS[clause.risk_level]
-                                return (
-                                    <div
-                                        key={index}
-                                        style={{
-                                            opacity: visibleCards.includes(index) ? 1 : 0,
-                                            transform: visibleCards.includes(index) ? "translateY(0)" : "translateY(20px)",
-                                            transition: "opacity 0.4s ease-out, transform 0.4s ease-out",
-                                            borderLeftColor: colors.border,
-                                        }}
-                                        className="bg-white rounded-2xl p-6 md:p-8 border-2 border-[#0A0A0A] border-l-[10px] shadow-[6px_6px_0_0_#0A0A0A]"
-                                    >
-                                        <div className="flex flex-wrap items-center gap-3 mb-4">
-                                            <span className="text-sm font-black uppercase tracking-wider text-[#0A0A0A]">
-                                                Clause {clause.clause_number}
-                                            </span>
-                                            <span
-                                                className="inline-block px-3 py-1 rounded text-xs font-black uppercase tracking-wider text-white"
-                                                style={{ backgroundColor: colors.bg }}
-                                            >
-                                                {clause.risk_level} RISK
-                                            </span>
-                                        </div>
-
-                                        <p className="italic text-[#3D2817] mb-5 pl-4 border-l-4 border-[#FFF8E7]">
-                                            &ldquo;{clause.clause_text}&rdquo;
-                                        </p>
-
-                                        <div className="space-y-4">
-                                            <ClauseSection label="Plain English" content={clause.plain_english} color="#0A0A0A" />
-                                            <ClauseSection label="Law Violated" content={clause.law_violated} color="#FF5722" />
-                                            <ClauseSection label="Negotiation Tip" content={clause.negotiation_tip} color="#22C55E" />
-                                        </div>
-                                    </div>
-                                )
-                            })}
-                        </div>
-                    </div>
-
-                    <div className="bg-[#0A0A0A] text-white rounded-2xl p-8 md:p-12 border-2 border-[#0A0A0A] shadow-[6px_6px_0_0_#FF5722] text-center">
-                        <h3 className="text-2xl md:text-4xl font-black mb-3">Take this report with you.</h3>
-                        <p className="text-gray-400 mb-6 max-w-xl mx-auto">
-                            Download your full risk report as a PDF. Share it with your lawyer or use it during negotiation.
-                        </p>
-                        <button
-                            onClick={handleDownload}
-                            disabled={isDownloading}
-                            className="inline-flex items-center gap-2 bg-[#FF5722] hover:bg-white hover:text-[#0A0A0A] text-white px-10 py-5 rounded font-bold text-lg transition-colors disabled:opacity-50"
-                        >
-                            {isDownloading ? (
-                                <>
-                                    <Loader2 className="h-5 w-5 animate-spin" />
-                                    Generating PDF...
-                                </>
-                            ) : (
-                                <>
-                                    <Download className="h-5 w-5" />
-                                    Download PDF
-                                </>
-                            )}
-                        </button>
                     </div>
                 </div>
             </main>
@@ -371,30 +391,74 @@ export default function DashboardPage() {
     )
 }
 
-function StatCard({ label, value, bgColor, textColor, icon }: { label: string; value: number; bgColor: string; textColor: string; icon: React.ReactNode }) {
+function StatCard({ label, value, type }: { label: string; value: number; type: "total" | "high" | "medium" | "low" }) {
+    const styles = {
+        total: { bg: "#f5f5f0", border: "#e5e5e0", num: "#0A0A0A" },
+        high: { bg: "#fef2f2", border: "#fecaca", num: "#EF4444" },
+        medium: { bg: "#fffbeb", border: "#fde68a", num: "#d97706" },
+        low: { bg: "#f0fdf4", border: "#bbf7d0", num: "#16a34a" },
+    }
+    const s = styles[type]
     return (
-        <div className="rounded-2xl p-5 border-2 border-[#0A0A0A] shadow-[6px_6px_0_0_#0A0A0A] flex flex-col" style={{ backgroundColor: bgColor }}>
-            <div className="flex items-center justify-between mb-3" style={{ color: textColor }}>{icon}</div>
-            <span className="text-4xl md:text-5xl font-black" style={{ color: textColor }}>{value}</span>
-            <span className="text-xs font-bold uppercase tracking-wider mt-1" style={{ color: textColor }}>{label}</span>
+        <div
+            className="rounded-xl p-6 text-center border-[1.5px]"
+            style={{ background: s.bg, borderColor: s.border }}
+        >
+            <div className="text-5xl font-black" style={{ color: s.num }}>
+                {value}
+            </div>
+            <div className="text-xs text-[#888] mt-1 font-medium uppercase tracking-wider">{label}</div>
         </div>
     )
 }
 
-function ClauseSection({ label, content, color }: { label: string; content: string; color: string }) {
+function RiskBadge({ level }: { level: "HIGH" | "MEDIUM" | "LOW" }) {
+    const styles = {
+        HIGH: { bg: "#fef2f2", text: "#dc2626" },
+        MEDIUM: { bg: "#fffbeb", text: "#d97706" },
+        LOW: { bg: "#f0fdf4", text: "#16a34a" },
+    }
+    const s = styles[level]
     return (
-        <div>
-            <div className="text-xs font-black uppercase tracking-wider mb-1" style={{ color }}>{label}</div>
-            <p className="text-sm text-[#3D2817] leading-relaxed">{content}</p>
+        <span
+            className="px-2.5 py-0.5 rounded text-[10px] font-bold whitespace-nowrap"
+            style={{ background: s.bg, color: s.text }}
+        >
+            {level}
+        </span>
+    )
+}
+
+function LegendItem({ color, label }: { color: string; label: string }) {
+    return (
+        <div className="flex items-center gap-2 text-sm text-[#777]">
+            <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: color }} />
+            {label}
         </div>
     )
 }
 
-function Legend({ color, label }: { color: string; label: string }) {
+function InfoBlock({
+    label,
+    content,
+    bgColor,
+    labelColor,
+    textColor,
+}: {
+    label: string
+    content: string
+    bgColor: string
+    labelColor: string
+    textColor: string
+}) {
     return (
-        <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full border border-[#0A0A0A]" style={{ backgroundColor: color }} />
-            <span className="text-xs font-bold text-[#3D2817]">{label}</span>
+        <div className="rounded-lg p-4" style={{ background: bgColor }}>
+            <div className="text-[10px] font-bold uppercase tracking-widest mb-2" style={{ color: labelColor }}>
+                {label}
+            </div>
+            <div className="text-sm leading-relaxed" style={{ color: textColor }}>
+                {content}
+            </div>
         </div>
     )
 }

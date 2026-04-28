@@ -2,6 +2,7 @@ import os
 import json
 from groq import Groq
 from dotenv import load_dotenv
+from datetime import datetime
 
 load_dotenv()
 
@@ -9,10 +10,37 @@ client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
 
 def split_text(text, chunk_size=3000):
-    return [text[i:i + chunk_size] for i in range(0, len(text), chunk_size)]
+    paragraphs = text.split("\n")
+    chunks = []
+    current = ""
+
+    for p in paragraphs:
+        if len(current) + len(p) < chunk_size:
+            current += p + "\n"
+        else:
+            chunks.append(current)
+            current = p + "\n"
+
+    if current:
+        chunks.append(current)
+
+    return chunks
 
 
 def analyze_document(text: str, doc_type: str) -> dict:
+
+    if not text or len(text.strip()) < 50:
+        return {
+            "overall_score": 0,
+            "overall_risk": "High Risk",
+            "total_clauses": 0,
+            "high_risk_count": 0,
+            "medium_risk_count": 0,
+            "low_risk_count": 0,
+            "summary": "Invalid or empty document.",
+            "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "clauses": []
+        }
 
     system_prompt = f"""
 You are a highly experienced Indian property lawyer specializing in Karnataka real estate law, banking regulations, and property transactions.
@@ -91,7 +119,8 @@ Return only valid JSON array:
             if isinstance(chunk_clauses, list):
                 all_clauses.extend(chunk_clauses)
 
-        except:
+        except Exception as e:
+            print("Error:", e)
             continue
 
     if not all_clauses:
@@ -102,8 +131,11 @@ Return only valid JSON array:
             "high_risk_count": 0,
             "medium_risk_count": 0,
             "low_risk_count": 0,
+            "summary": "Unable to process the document.",
+            "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "clauses": [{
                 "clause_number": 1,
+                "original_clause_number": 1,
                 "risk_level": "HIGH",
                 "clause_text": "Analysis failed",
                 "plain_english": "Unable to process the document.",
@@ -111,6 +143,24 @@ Return only valid JSON array:
                 "negotiation_tip": "Please consult a lawyer."
             }]
         }
+
+    unique_clauses = []
+    seen = set()
+
+    for c in all_clauses:
+        text_val = c.get("clause_text", "")
+        if text_val not in seen:
+            seen.add(text_val)
+            unique_clauses.append(c)
+
+    all_clauses = unique_clauses
+
+    for idx, clause in enumerate(all_clauses, start=1):
+        clause["original_clause_number"] = idx
+
+    all_clauses.sort(
+        key=lambda c: {"HIGH": 0, "MEDIUM": 1, "LOW": 2}.get(c.get("risk_level"), 3)
+    )
 
     for idx, clause in enumerate(all_clauses, start=1):
         clause["clause_number"] = idx
@@ -129,6 +179,8 @@ Return only valid JSON array:
     else:
         overall_risk = "High Risk"
 
+    summary = f"This document contains {high_count} high-risk and {medium_count} medium-risk clauses."
+
     return {
         "overall_score": score,
         "overall_risk": overall_risk,
@@ -136,5 +188,7 @@ Return only valid JSON array:
         "high_risk_count": high_count,
         "medium_risk_count": medium_count,
         "low_risk_count": low_count,
+        "summary": summary,
+        "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "clauses": all_clauses
     }
