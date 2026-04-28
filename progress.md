@@ -94,3 +94,9 @@ Constraints and Challenges
 Currently Working On
 
 Connecting the frontend to the backend for live end-to-end testing. Vaishnav's Flask backend is running on his laptop, and we're updating `lib/api.ts` with his local IP so my frontend can hit `/analyze` and `/generate-redlined-pdf` over the same WiFi. Testing with real builder agreements, sale deeds, and home loan letters to make sure the full flow holds up — upload, AI analysis, dashboard render, PDF download. Tweaking edge cases as we hit them.
+
+
+Next
+- Fix PDF generation endpoint (check wkhtmltopdf install and pdfkit config)
+- Test with sale deed and home loan documents
+- Final demo polish
