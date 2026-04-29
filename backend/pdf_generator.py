@@ -1,23 +1,52 @@
 import pdfkit
 
-config = pdfkit.configuration(
-    wkhtmltopdf=r"C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe"
-)
+WKHTML_PATH = r"C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe"
+config = pdfkit.configuration(wkhtmltopdf=WKHTML_PATH)
+
+
+def generate_summary_advice(data):
+    high = data["high_risk_count"]
+    medium = data["medium_risk_count"]
+    total = data["total_clauses"]
+
+    if data["overall_score"] >= 70:
+        return "This agreement appears generally safe. Still review all clauses carefully before signing."
+
+    elif data["overall_score"] >= 40:
+        return f"{medium + high} clauses need attention. Review them carefully and negotiate unclear terms before signing."
+
+    else:
+        return f"{high} serious red flags found. This document is heavily one-sided. Strongly consider renegotiation or legal consultation before proceeding."
 
 
 def generate_html(data, doc_type):
-    clauses = data['clauses']
+    clauses = data["clauses"]
+
+    score = data["overall_score"]
+
+    if score >= 70:
+        decision = "SAFE TO PROCEED"
+        meaning = "Low overall risk. Most clauses are balanced."
+    elif score >= 40:
+        decision = "PROCEED WITH CAUTION"
+        meaning = "Moderate risk detected. Some clauses may be unfavorable."
+    else:
+        decision = "DO NOT SIGN AS-IS"
+        meaning = "High risk detected. Multiple clauses may be harmful."
+
+    summary_advice = generate_summary_advice(data)
 
     return f"""
     <html>
     <head>
         <meta charset="UTF-8">
+
         <style>
             body {{
                 font-family: Arial, sans-serif;
-                color: #0f172a;
                 margin: 0;
                 padding: 0;
+                color: #0f172a;
             }}
 
             .page {{
@@ -27,9 +56,8 @@ def generate_html(data, doc_type):
 
             .title {{
                 text-align: center;
-                font-size: 48px;
+                font-size: 50px;
                 font-weight: bold;
-                margin-bottom: 5px;
             }}
 
             .subtitle {{
@@ -46,26 +74,33 @@ def generate_html(data, doc_type):
             .score {{
                 font-size: 80px;
                 font-weight: bold;
-                color: #16a34a;
+                color: #dc2626;
                 margin: 10px 0;
             }}
 
-            .risk-text {{
-                font-size: 20px;
+            .decision {{
+                font-size: 22px;
                 font-weight: bold;
+                color: #dc2626;
+                margin-bottom: 10px;
+            }}
+
+            .meaning {{
+                font-size: 16px;
+                color: #475569;
                 margin-bottom: 20px;
             }}
 
-            .summary {{
+            .summary-box {{
+                background: #f1f5f9;
+                padding: 15px;
+                border-left: 5px solid #dc2626;
                 margin-top: 20px;
-                font-size: 16px;
-                color: #334155;
             }}
 
             .table {{
                 margin-top: 40px;
                 display: flex;
-                justify-content: space-between;
                 border: 1px solid #e2e8f0;
             }}
 
@@ -117,7 +152,6 @@ def generate_html(data, doc_type):
             .clause-text {{
                 font-style: italic;
                 margin-bottom: 12px;
-                color: #334155;
             }}
 
             .content-label {{
@@ -127,77 +161,80 @@ def generate_html(data, doc_type):
 
             .content {{
                 margin-top: 4px;
-                color: #334155;
             }}
+
         </style>
     </head>
 
     <body>
 
-        <!-- PAGE 1: SUMMARY -->
+        <!-- SUMMARY PAGE -->
         <div class="page">
 
-            <div class="title">सहीSign</div>
+            <div class="title">SahiSign</div>
             <div class="subtitle">Because every signature should be sahi</div>
 
             <hr>
 
             <div class="center">
                 <p><b>Document:</b> {doc_type}</p>
-                <p><b>Generated On:</b> {data['generated_at']}</p>
+                <p><b>Generated On:</b> {data["generated_at"]}</p>
 
-                <div class="score">{data['overall_score']}</div>
-                <div class="risk-text">{data['overall_risk']}</div>
+                <div class="score">{score}/100</div>
+                <div class="decision">{decision}</div>
+                <div class="meaning">{meaning}</div>
 
-                <div class="summary">{data['summary']}</div>
+                <div class="summary-box">
+                    {summary_advice}
+                </div>
             </div>
 
             <div class="table">
                 <div class="cell">
-                    <div class="number">{data['total_clauses']}</div>
+                    <div class="number">{data["total_clauses"]}</div>
                     <div class="label">Total Clauses</div>
                 </div>
                 <div class="cell">
-                    <div class="number" style="color:#dc2626">{data['high_risk_count']}</div>
+                    <div class="number" style="color:#dc2626">{data["high_risk_count"]}</div>
                     <div class="label">High Risk</div>
                 </div>
                 <div class="cell">
-                    <div class="number" style="color:#d97706">{data['medium_risk_count']}</div>
+                    <div class="number" style="color:#d97706">{data["medium_risk_count"]}</div>
                     <div class="label">Medium Risk</div>
                 </div>
                 <div class="cell">
-                    <div class="number" style="color:#16a34a">{data['low_risk_count']}</div>
+                    <div class="number" style="color:#16a34a">{data["low_risk_count"]}</div>
                     <div class="label">Low Risk</div>
                 </div>
             </div>
 
         </div>
 
-        <!-- PAGE 2: CLAUSE ANALYSIS -->
+        <!-- CLAUSE PAGE -->
         <div class="page">
 
-            <div class="title">Clause Analysis</div>
+            <div class="section-title">Clause Analysis</div>
 
             {''.join([
                 f'''
-                <div class="clause {c['risk_level'].lower()}">
+                <div class="clause {c["risk_level"].lower()}">
 
                     <div class="clause-title">
-                        Original Clause {c.get('original_clause_number', c['clause_number'])} — {c['risk_level']} RISK
+                        Clause {c.get("original_clause_number", c["clause_number"])} — {c["risk_level"]}
                     </div>
 
                     <div class="clause-text">
-                        "{c.get('clause_text', '')}"
+                        "{c.get("clause_text", "")}"
                     </div>
 
                     <div class="content-label">Plain English</div>
-                    <div class="content">{c['plain_english']}</div>
+                    <div class="content">{c["plain_english"]}</div>
 
                     <div class="content-label">Law Violated</div>
-                    <div class="content">{c['law_violated']}</div>
+                    <div class="content">{c["law_violated"]}</div>
 
                     <div class="content-label">Negotiation Tip</div>
-                    <div class="content">{c['negotiation_tip']}</div>
+                    <div class="content">{c["negotiation_tip"]}</div>
 
                 </div>
                 '''
@@ -213,5 +250,17 @@ def generate_html(data, doc_type):
 
 def generate_report_pdf(data, doc_type):
     html = generate_html(data, doc_type)
-    pdf = pdfkit.from_string(html, False, configuration=config)
+
+    options = {
+        'encoding': 'UTF-8',
+        'enable-local-file-access': ''
+    }
+
+    pdf = pdfkit.from_string(
+        html,
+        False,
+        configuration=config,
+        options=options
+    )
+
     return pdf

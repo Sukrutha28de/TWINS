@@ -26,65 +26,6 @@ interface AnalysisData {
     clauses: Clause[]
 }
 
-const SAMPLE_DATA: AnalysisData = {
-    overall_score: 72,
-    overall_risk: "HIGH",
-    total_clauses: 6,
-    high_risk_count: 2,
-    medium_risk_count: 3,
-    low_risk_count: 1,
-    clauses: [
-        {
-            clause_number: 1,
-            clause_text: "The Builder reserves the right to forfeit 30% of the total consideration amount in case of cancellation by the Buyer, irrespective of the reason for cancellation.",
-            risk_level: "HIGH",
-            plain_english: "If you cancel for any reason, the builder keeps 30% of your money — no questions asked.",
-            law_violated: "RERA Act 2016, Section 18 — Forfeiture on cancellation is capped at a reasonable amount, typically not exceeding 10% of the apartment cost.",
-            negotiation_tip: "Push back and demand the forfeiture clause be reduced to 10% as per RERA guidelines. Cite RERA Section 18 directly.",
-        },
-        {
-            clause_number: 2,
-            clause_text: "Possession shall be delivered within 60 months from the date of execution of this agreement, subject to force majeure.",
-            risk_level: "HIGH",
-            plain_english: "The builder has up to 5 years to give you possession, and can delay even more citing force majeure.",
-            law_violated: "RERA Act 2016, Section 18 — Standard possession timelines are typically 36 months. Penalty for delay must be specified.",
-            negotiation_tip: "Negotiate timeline down to 36 months. Insist on a penalty clause (e.g., monthly interest on amount paid) for any delay beyond the agreed date.",
-        },
-        {
-            clause_number: 3,
-            clause_text: "The carpet area of the flat shall be approximately 850 sq ft, with a loading factor of 45%, making the super built-up area approximately 1232 sq ft.",
-            risk_level: "MEDIUM",
-            plain_english: "You're paying for 1232 sq ft, but only 850 sq ft is actually usable space inside your flat. The 45% loading is on the higher side.",
-            law_violated: "RERA Act 2016 — RERA mandates sale based on carpet area. Loading factors above 30-35% should be scrutinized.",
-            negotiation_tip: "Ask for a clear breakdown of common areas included. If loading exceeds 35%, negotiate a price reduction or ask for pricing purely on carpet area.",
-        },
-        {
-            clause_number: 4,
-            clause_text: "Maintenance charges shall be decided solely by the builder for the first 3 years post-possession, after which a society shall be formed.",
-            risk_level: "MEDIUM",
-            plain_english: "The builder controls how much you pay for maintenance for the first 3 years with no say from you.",
-            law_violated: "RERA Act 2016 — Society formation should happen within 3 months of majority occupation. Builder-decided maintenance can be inflated.",
-            negotiation_tip: "Negotiate a cap on maintenance charges and push for earlier society formation (within 1 year or upon 50% occupation).",
-        },
-        {
-            clause_number: 5,
-            clause_text: "Any disputes arising shall be subject to arbitration as per the Arbitration and Conciliation Act, 1996, with the arbitrator appointed by the Builder.",
-            risk_level: "MEDIUM",
-            plain_english: "If there's a dispute, you can't go to court directly. The builder picks the arbitrator — which may not be neutral.",
-            law_violated: "Consumer Protection Act, 2019 — Buyers have the right to approach consumer forums. One-sided arbitrator appointment is unfair.",
-            negotiation_tip: "Insist on mutual appointment of the arbitrator or retain the right to approach RERA authority / consumer court.",
-        },
-        {
-            clause_number: 6,
-            clause_text: "The builder shall provide a 5-year structural warranty on the building from the date of possession.",
-            risk_level: "LOW",
-            plain_english: "The builder guarantees the building's structural integrity for 5 years after you move in. This is a standard and fair clause.",
-            law_violated: "None — This clause complies with RERA Act 2016, Section 14(3) which mandates a minimum 5-year structural defect liability.",
-            negotiation_tip: "This is a standard clause. You may still want to clarify what exactly is covered (e.g., plumbing, electrical, waterproofing).",
-        },
-    ],
-}
-
 export default function DashboardPage() {
     const router = useRouter()
     const [analysisData, setAnalysisData] = useState<AnalysisData | null>(null)
@@ -94,17 +35,13 @@ export default function DashboardPage() {
     const [displayScore, setDisplayScore] = useState(0)
     const [openClauses, setOpenClauses] = useState<Set<number>>(new Set())
     const [visibleCards, setVisibleCards] = useState<number[]>([])
-    const [isDemo, setIsDemo] = useState(false)
 
     useEffect(() => {
         const results = localStorage.getItem("sahisign_results")
         const docType = localStorage.getItem("sahisign_doc_type")
         const docName = localStorage.getItem("sahisign_doc_name")
         if (!results) {
-            setAnalysisData(SAMPLE_DATA)
-            setDocumentType("Builder Agreement")
-            setDocumentName("sample_agreement.pdf")
-            setIsDemo(true)
+            router.push("/upload")
             return
         }
         setAnalysisData(JSON.parse(results))
@@ -185,10 +122,6 @@ export default function DashboardPage() {
         analysisData.overall_score >= 70 ? "#22C55E"
             : analysisData.overall_score >= 40 ? "#F59E0B"
                 : "#EF4444"
-    const riskLabel =
-        analysisData.overall_score >= 70 ? "Low Risk"
-            : analysisData.overall_score >= 40 ? "Medium Risk"
-                : "High Risk"
 
     const donutData = [
         { name: "High", value: analysisData.high_risk_count, color: "#EF4444" },
@@ -202,16 +135,6 @@ export default function DashboardPage() {
 
             <main className="flex-1 px-6 md:px-12 py-12">
                 <div className="max-w-7xl mx-auto">
-                    {/* Demo Banner */}
-                    {isDemo && (
-                        <div className="mb-8 bg-[#A78BFA] text-white rounded-xl px-6 py-4 flex items-center gap-3 font-semibold">
-                            <span>📋</span>
-                            Demo Mode — Showing sample analysis.{" "}
-                            <a href="/upload" className="underline hover:text-[#FFF8E7]">Upload a real document</a>{" "}
-                            to see your results.
-                        </div>
-                    )}
-
                     {/* Header */}
                     <div className="flex justify-between items-start flex-wrap gap-4 mb-10">
                         <div>
@@ -249,20 +172,48 @@ export default function DashboardPage() {
                     {/* Main Grid: Score Card + Clauses */}
                     <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-8">
                         {/* Score Card */}
-                        <div className="bg-[#0A0A0A] text-[#FFFDF5] rounded-2xl p-8 text-center lg:sticky lg:top-24 self-start">
-                            <p className="text-xs font-bold uppercase tracking-widest text-[#666] mb-6">
-                                Overall Risk Score
-                            </p>
-                            <div className="relative w-44 h-44 mx-auto mb-6">
+                        <div className="bg-[#0A0A0A] text-[#FFFDF5] rounded-2xl p-6 lg:sticky lg:top-24 self-start">
+                            {/* Verdict header */}
+                            <div className="text-center mb-5">
+                                <div className="flex items-baseline justify-center gap-1 mb-2">
+                                    <span className="text-6xl font-black" style={{ color: scoreColor }}>
+                                        {displayScore}
+                                    </span>
+                                    <span className="text-lg font-bold text-[#666]">/100</span>
+                                </div>
+                                <div className="h-px w-12 mx-auto mb-3" style={{ backgroundColor: scoreColor }} />
+                                <p className="text-[11px] font-black uppercase tracking-widest" style={{ color: scoreColor }}>
+                                    {analysisData.overall_score >= 70 && "Looks Safe"}
+                                    {analysisData.overall_score >= 40 && analysisData.overall_score < 70 && "Proceed With Caution"}
+                                    {analysisData.overall_score < 40 && "Do Not Sign As-Is"}
+                                </p>
+                            </div>
+
+                            {/* Verdict message */}
+                            <div className="bg-[#1a1a1a] rounded-lg p-4 mb-5 text-left border-l-4" style={{ borderLeftColor: scoreColor }}>
+                                <p className="text-xs font-bold mb-1" style={{ color: scoreColor }}>
+                                    {analysisData.overall_score >= 70 && "✓ You're in good shape"}
+                                    {analysisData.overall_score >= 40 && analysisData.overall_score < 70 && "⚠ Don't sign yet"}
+                                    {analysisData.overall_score < 40 && "✕ Walk away or renegotiate"}
+                                </p>
+                                <p className="text-xs text-[#aaa] leading-relaxed">
+                                    {analysisData.overall_score >= 70 && `Out of ${analysisData.total_clauses} clauses, only ${analysisData.high_risk_count + analysisData.medium_risk_count} need attention. Review them, but the agreement is largely fair.`}
+                                    {analysisData.overall_score >= 40 && analysisData.overall_score < 70 && `${analysisData.high_risk_count} of ${analysisData.total_clauses} clauses could cost you money. Negotiate them before signing.`}
+                                    {analysisData.overall_score < 40 && `${analysisData.high_risk_count} serious red flags found. This document is heavily one-sided. Get a lawyer involved.`}
+                                </p>
+                            </div>
+
+                            {/* Donut */}
+                            <div className="relative w-40 h-40 mx-auto mb-4">
                                 <ResponsiveContainer width="100%" height="100%">
                                     <PieChart>
                                         <Pie
                                             data={donutData}
                                             cx="50%"
                                             cy="50%"
-                                            innerRadius={62}
-                                            outerRadius={85}
-                                            paddingAngle={2}
+                                            innerRadius={50}
+                                            outerRadius={75}
+                                            paddingAngle={3}
                                             dataKey="value"
                                             strokeWidth={0}
                                         >
@@ -273,27 +224,29 @@ export default function DashboardPage() {
                                     </PieChart>
                                 </ResponsiveContainer>
                                 <div className="absolute inset-0 flex flex-col items-center justify-center">
-                                    <span className="text-5xl font-black" style={{ color: scoreColor }}>
-                                        {displayScore}
+                                    <span className="text-3xl font-black" style={{ color: scoreColor }}>
+                                        {analysisData.total_clauses}
                                     </span>
-                                    <span className="text-xs text-[#666] mt-1">{riskLabel}</span>
+                                    <span className="text-[9px] uppercase tracking-wider text-[#666] mt-0.5">Clauses</span>
                                 </div>
                             </div>
 
-                            <div className="space-y-2 mb-6 text-left px-2">
-                                <LegendItem color="#EF4444" label={`High Risk (${analysisData.high_risk_count} clauses)`} />
-                                <LegendItem color="#F59E0B" label={`Medium Risk (${analysisData.medium_risk_count} clauses)`} />
-                                <LegendItem color="#22C55E" label={`Low Risk (${analysisData.low_risk_count} clauses)`} />
+                            {/* Legend */}
+                            <div className="space-y-1.5 mb-5 text-left">
+                                <LegendItem color="#EF4444" label={`${analysisData.high_risk_count} High`} />
+                                <LegendItem color="#F59E0B" label={`${analysisData.medium_risk_count} Medium`} />
+                                <LegendItem color="#22C55E" label={`${analysisData.low_risk_count} Low`} />
                             </div>
 
-                            <div className="h-px bg-[#1a1a1a] mb-6" />
+                            <div className="h-px bg-[#1a1a1a] mb-4" />
 
+                            {/* Download */}
                             <button
                                 onClick={handleDownload}
                                 disabled={isDownloading}
                                 className="w-full bg-[#FF5722] hover:opacity-85 text-white py-3 rounded-lg font-bold text-sm transition-all hover:-translate-y-0.5 disabled:opacity-50"
                             >
-                                {isDownloading ? "Generating..." : "⬇ Download Risk Report PDF"}
+                                {isDownloading ? "Generating..." : "⬇ Download Report"}
                             </button>
                         </div>
 
@@ -357,6 +310,7 @@ export default function DashboardPage() {
                                                         bgColor="#f5f5f0"
                                                         labelColor="#888"
                                                         textColor="#333"
+                                                        fullWidth
                                                     />
 
                                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
@@ -444,15 +398,17 @@ function InfoBlock({
     bgColor,
     labelColor,
     textColor,
+    fullWidth = false,
 }: {
     label: string
     content: string
     bgColor: string
     labelColor: string
     textColor: string
+    fullWidth?: boolean
 }) {
     return (
-        <div className="rounded-lg p-4" style={{ background: bgColor }}>
+        <div className={`rounded-lg p-4 ${fullWidth ? "" : ""}`} style={{ background: bgColor }}>
             <div className="text-[10px] font-bold uppercase tracking-widest mb-2" style={{ color: labelColor }}>
                 {label}
             </div>

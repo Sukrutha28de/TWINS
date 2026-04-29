@@ -148,8 +148,8 @@ function UploadPageContent() {
                                         onClick={() => setDocumentType(doc.value)}
                                         disabled={isUploading}
                                         className={`relative rounded-xl p-5 border-2 border-[#0A0A0A] transition-all duration-200 text-left ${isSelected
-                                            ? "shadow-[6px_6px_0_0_#0A0A0A] -translate-y-1"
-                                            : "shadow-[3px_3px_0_0_#0A0A0A] hover:-translate-y-0.5 hover:shadow-[5px_5px_0_0_#0A0A0A]"
+                                                ? "shadow-[6px_6px_0_0_#0A0A0A] -translate-y-1"
+                                                : "shadow-[3px_3px_0_0_#0A0A0A] hover:-translate-y-0.5 hover:shadow-[5px_5px_0_0_#0A0A0A]"
                                             }`}
                                         style={{ backgroundColor: doc.color }}
                                     >
